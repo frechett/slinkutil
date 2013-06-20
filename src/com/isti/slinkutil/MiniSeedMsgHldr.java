@@ -90,7 +90,7 @@ public class MiniSeedMsgHldr extends Number {
    * @return The channel identifier string.
    */
   public String getChannelIdStr() {
-    return staChaNetLoc.getChannelIdStr();
+    return staChaNetLoc.getChannelCode();
   }
 
   /**
@@ -98,7 +98,7 @@ public class MiniSeedMsgHldr extends Number {
    * @return The location identifier string.
    */
   public String getLocationIdStr() {
-    return staChaNetLoc.getLocationIdStr();
+    return staChaNetLoc.getLocationCode();
   }
 
   /**
@@ -122,7 +122,7 @@ public class MiniSeedMsgHldr extends Number {
    * @return The network code string.
    */
   public String getNetworkCodeStr() {
-    return staChaNetLoc.getNetworkCodeStr();
+    return staChaNetLoc.getNetworkCode();
   }
 
   /**
@@ -170,7 +170,7 @@ public class MiniSeedMsgHldr extends Number {
    * @return The station identifier string.
    */
   public String getStationIdStr() {
-    return staChaNetLoc.getStationIdStr();
+    return staChaNetLoc.getStationCode();
   }
 
   /**

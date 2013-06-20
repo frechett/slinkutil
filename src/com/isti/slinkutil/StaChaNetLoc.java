@@ -8,11 +8,7 @@ package com.isti.slinkutil;
 /**
  * Class StaChaNetLoc defines the station, channel, network, location.
  */
-public class StaChaNetLoc implements IStaChaNetLoc {
-	private static final String EMPTY_STRING = "";
-
-	private static final String separatorText = ".";
-
+public class StaChaNetLoc extends AbstractStaChaNetLoc {
 	private final String channelIdStr;
 
 	/** Cache the hash code. */
@@ -28,13 +24,13 @@ public class StaChaNetLoc implements IStaChaNetLoc {
 	 * Creates the station, channel, network, location.
 	 * 
 	 * @param stationIdStr
-	 *            station identifier string.
+	 *            station code string.
 	 * @param channelIdStr
-	 *            channel identifier string.
+	 *            channel code string.
 	 * @param networkCodeStr
 	 *            network code string.
 	 * @param locationIdStr
-	 *            location identifier string.
+	 *            location code string.
 	 */
 	public StaChaNetLoc(String stationIdStr, String channelIdStr,
 			String networkCodeStr, String locationIdStr) {
@@ -45,39 +41,20 @@ public class StaChaNetLoc implements IStaChaNetLoc {
 	}
 
 	/**
-	 * Indicates whether some other object is "equal to" this one.
+	 * Returns the channel code string for the message.
 	 * 
-	 * @param obj
-	 *            the reference object with which to compare.
-	 * @return <code>true</code> if this object is the same as the obj argument;
-	 *         <code>false</code> otherwise.
-	 * @see #hashCode()
+	 * @return The channel code string.
 	 */
-	public boolean equals(Object obj) {
-		if (this == obj) {
-			return true;
-		}
-		if (obj instanceof IStaChaNetLoc) {
-			return toString().equals(obj.toString());
-		}
-		return false;
-	}
-
-	/**
-	 * Returns the channel identifier string for the message.
-	 * 
-	 * @return The channel identifier string.
-	 */
-	public String getChannelIdStr() {
+	public String getChannelCode() {
 		return channelIdStr;
 	}
 
 	/**
-	 * Returns the location identifier string for the message.
+	 * Returns the location code string for the message.
 	 * 
-	 * @return The location identifier string.
+	 * @return The location code string.
 	 */
-	public String getLocationIdStr() {
+	public String getLocationCode() {
 		return locationIdStr;
 	}
 
@@ -86,16 +63,16 @@ public class StaChaNetLoc implements IStaChaNetLoc {
 	 * 
 	 * @return The network code string.
 	 */
-	public String getNetworkCodeStr() {
+	public String getNetworkCode() {
 		return networkCodeStr;
 	}
 
 	/**
-	 * Returns the station identifier string for the message.
+	 * Returns the station code string for the message.
 	 * 
-	 * @return The station identifier string.
+	 * @return The station code string.
 	 */
-	public String getStationIdStr() {
+	public String getStationCode() {
 		return stationIdStr;
 	}
 
@@ -110,7 +87,7 @@ public class StaChaNetLoc implements IStaChaNetLoc {
 	 */
 	public int hashCode() {
 		if (hash == 0) {
-			hash = toString().hashCode();
+			hash = super.hashCode();
 		}
 		return hash;
 	}
@@ -123,24 +100,6 @@ public class StaChaNetLoc implements IStaChaNetLoc {
 	 *         location.
 	 */
 	public String toString() {
-		return stationIdStr + separatorText + channelIdStr + separatorText
-				+ networkCodeStr + separatorText + locationIdStr;
-	}
-
-	/**
-	 * Returns a copy of the string, with leading and trailing whitespace
-	 * omitted.
-	 * 
-	 * @param s
-	 *            the string.
-	 * @return A copy of the string with leading and trailing white space
-	 *         removed, or the string if it has no leading or trailing white
-	 *         space.
-	 */
-	private String trim(String s) {
-		if (s == null) {
-			return EMPTY_STRING;
-		}
-		return s.trim();
+		return getUniqueId();
 	}
 }

@@ -94,10 +94,10 @@ public class MiniSeedGenerator implements MiniSeedConstants {
     final int numSamples = encodedData.getNumSamples();
     DataHeader dataHeader = new DataHeader(sequenceNum, dataHeaderTypeCode,
         defaultContinuationCode);
-    dataHeader.setStationIdentifier(staChaNetLoc.getStationIdStr());
-    dataHeader.setChannelIdentifier(staChaNetLoc.getChannelIdStr());
-    dataHeader.setNetworkCode(staChaNetLoc.getNetworkCodeStr());
-    dataHeader.setLocationIdentifier(staChaNetLoc.getLocationIdStr());
+    dataHeader.setStationIdentifier(staChaNetLoc.getStationCode());
+    dataHeader.setChannelIdentifier(staChaNetLoc.getChannelCode());
+    dataHeader.setNetworkCode(staChaNetLoc.getNetworkCode());
+    dataHeader.setLocationIdentifier(staChaNetLoc.getLocationCode());
     dataHeader.setStartBtime(startTime.getBtime());
     dataHeader.setNumBlockettes((byte) 1);
     dataHeader.setNumSamples((short) numSamples);
@@ -313,10 +313,10 @@ public class MiniSeedGenerator implements MiniSeedConstants {
     final byte timingQuality = dataInfo.getTimeQualityValue();
     DataHeader dataHeader = new DataHeader(sequenceNum, dataHeaderTypeCode,
         continuationCode);
-    dataHeader.setStationIdentifier(staChaNetLoc.getStationIdStr());
-    dataHeader.setChannelIdentifier(staChaNetLoc.getChannelIdStr());
-    dataHeader.setNetworkCode(staChaNetLoc.getNetworkCodeStr());
-    dataHeader.setLocationIdentifier(staChaNetLoc.getLocationIdStr());
+    dataHeader.setStationIdentifier(staChaNetLoc.getStationCode());
+    dataHeader.setChannelIdentifier(staChaNetLoc.getChannelCode());
+    dataHeader.setNetworkCode(staChaNetLoc.getNetworkCode());
+    dataHeader.setLocationIdentifier(staChaNetLoc.getLocationCode());
     dataHeader.setStartBtime(dataInfo.getStartSeedTime().getBtime());
     dataHeader.setIOClockFlags(dataInfo.getIoClockFlags());
     SampleRateInfo sampleRateInfo = new SampleRateInfo(dataInfo.getSampleRate());

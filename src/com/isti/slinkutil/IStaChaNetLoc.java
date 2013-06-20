@@ -11,31 +11,41 @@ package com.isti.slinkutil;
  * ensure the correct handling of hash table keys.
  */
 public interface IStaChaNetLoc {
-	/**
-	 * Returns the channel identifier string for the message.
-	 * 
-	 * @return The channel identifier string.
-	 */
-	public String getChannelIdStr();
+	/** An empty string. */
+	public static final String EMPTY_STRING = "";
 
 	/**
-	 * Returns the location identifier string for the message.
+	 * Returns the channel code.
 	 * 
-	 * @return The location identifier string.
+	 * @return The channel code string.
 	 */
-	public String getLocationIdStr();
+	public String getChannelCode();
 
 	/**
-	 * Returns the network code string for the message.
+	 * Returns the location code.
+	 * 
+	 * @return The location code string.
+	 */
+	public String getLocationCode();
+
+	/**
+	 * Returns the network code.
 	 * 
 	 * @return The network code string.
 	 */
-	public String getNetworkCodeStr();
+	public String getNetworkCode();
 
 	/**
-	 * Returns the station identifier string for the message.
+	 * Returns the station code.
 	 * 
-	 * @return The station identifier string.
+	 * @return The station code string.
 	 */
-	public String getStationIdStr();
+	public String getStationCode();
+
+	/**
+	 * Get the unique identifier.
+	 * 
+	 * @return the unique identifier.
+	 */
+	public String getUniqueId();
 }

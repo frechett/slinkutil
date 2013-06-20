@@ -678,10 +678,10 @@ public class SLinkConnection
             if((obj=iterObj.next()) instanceof IStaChaNetLoc)
             {  //SCNL object fetched OK
               scnlObj = (IStaChaNetLoc)obj;
-              if(matchPatStr(chaStr,scnlObj.getChannelIdStr()))
+              if(matchPatStr(chaStr,scnlObj.getChannelCode()))
               {  //channel ID matched to given channel-selector pattern str
                 if(locStr == null ||
-                             matchPatStr(locStr,scnlObj.getLocationIdStr()))
+                             matchPatStr(locStr,scnlObj.getLocationCode()))
                 {  //location-selector pattern str not given or matched OK
                   newSelChansSet.add(scnlObj);   //enter matched channel ID
                   matchFlag = true;              //indicate channel-ID match

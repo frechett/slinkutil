@@ -80,7 +80,7 @@ public class DigChannel implements IDigChannel {
    * @return The channel identifier string.
    */
   public String getChannelIdStr() {
-    return scnlObj.getChannelIdStr();
+    return scnlObj.getChannelCode();
   }
 
   /**
@@ -96,7 +96,7 @@ public class DigChannel implements IDigChannel {
    * @return The location identifier string.
    */
   public String getLocationIdStr() {
-    return scnlObj.getLocationIdStr();
+    return scnlObj.getLocationCode();
   }
 
   /**
@@ -104,7 +104,7 @@ public class DigChannel implements IDigChannel {
    * @return The network code string.
    */
   public String getNetworkCodeStr() {
-    return scnlObj.getNetworkCodeStr();
+    return scnlObj.getNetworkCode();
   }
 
   /**
@@ -120,7 +120,7 @@ public class DigChannel implements IDigChannel {
    * @return The station identifier string.
    */
   public String getStationIdStr() {
-    return scnlObj.getStationIdStr();
+    return scnlObj.getStationCode();
   }
 
   /**
