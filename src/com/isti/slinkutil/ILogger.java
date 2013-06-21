@@ -23,13 +23,6 @@ public interface ILogger {
   public static final int ALL_LEVEL = 0xFFFF;
 
   /**
-   * Checks the given a debug mask against this module's current mask.
-   * @param maskVal mask value to be checked.
-   * @return true if there are corresponding bits set, false if not.
-   */
-  public boolean checkDebugMask(int maskVal);
-
-  /**
    * Checks if the debug-mask bit for "level 1" (0x01) is set.
    * @return true if the debug-mask bit for "level 1" (0x01) is set;
    * false if not.
