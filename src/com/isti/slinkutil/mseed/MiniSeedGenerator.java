@@ -365,7 +365,7 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 		dataHeader.setSampleRateFactor(sampleRateInfo.getSampleRateFactor());
 		dataHeader.setSampleRateMultiplier(sampleRateInfo
 				.getSampleRateMultiplier());
-		dataHeader.setNumBlockettes((byte) 1);
+		dataHeader.setNumBlockettes((byte) 2);
 		dataHeader.setNumSamples((short) numSamples);
 		dataHeader.setDataBlocketteOffset((byte) PREFERRED_BEGINNING_OF_DATA);
 
