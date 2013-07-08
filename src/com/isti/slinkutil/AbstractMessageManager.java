@@ -109,6 +109,32 @@ public abstract class AbstractMessageManager implements IMessageManager {
 	 * storing them in the cache and delivering them to any current SeedLink
 	 * connections.
 	 * 
+	 * @param dChanObj
+	 *            digitizer-channel object to be associated with the message
+	 *            data.
+	 * @param dataInfo
+	 *            the data information.
+	 */
+	public void processMessage(IDigChannel dChanObj, IDataInfo dataInfo)
+
+	{
+		if (!dChanObj.isSelected()) { // no match to 'ChannelNames' parameter
+										// entries
+			if (LogMgr.isDebugLevel4()) { // debug-mask bit is set; output debug
+											// message
+				LogMgr.usrMsgDebug("AbstractMessageManager.processMessage:  Channel is not selected ("
+						+ dChanObj + "); message not delivered");
+			}
+			return;
+		}
+		processMessage(dChanObj.getStaChaNetLocObj(), dataInfo);
+	}
+
+	/**
+	 * Processes the given data message, converting it to 'miniSEED' messages,
+	 * storing them in the cache and delivering them to any current SeedLink
+	 * connections.
+	 * 
 	 * @param scnlObj
 	 *            the SCNL object.
 	 * @param dataInfo
@@ -134,37 +160,11 @@ public abstract class AbstractMessageManager implements IMessageManager {
 			LogMgr.usrMsgWarning("AbstractMessageManager error processing message:  "
 					+ ex);
 			LogMgr.usrMsgWarning("AbstractMessageManager:  SCNL=\"" + scnlObj
-					+ "\", startTime=" + dataInfo.getStartSeedTime()
-					+ ", sampRate=" + dataInfo.getSampleRate()
+					+ "\", startTime=" + dataInfo.getFirstTimeStamp()
+					+ ", endTime=" + dataInfo.getLastTimeStamp()
 					+ ", numSamples=" + dataInfo.getNumSamples());
 			LogMgr.usrMsgWarning(LogMgr.getStackTraceString(ex));
 		}
-	}
-
-	/**
-	 * Processes the given data message, converting it to 'miniSEED' messages,
-	 * storing them in the cache and delivering them to any current SeedLink
-	 * connections.
-	 * 
-	 * @param dChanObj
-	 *            digitizer-channel object to be associated with the message
-	 *            data.
-	 * @param dataInfo
-	 *            the data information.
-	 */
-	public void processMessage(IDigChannel dChanObj, IDataInfo dataInfo)
-
-	{
-		if (!dChanObj.isSelected()) { // no match to 'ChannelNames' parameter
-										// entries
-			if (LogMgr.isDebugLevel4()) { // debug-mask bit is set; output debug
-											// message
-				LogMgr.usrMsgDebug("AbstractMessageManager.processMessage:  Channel is not selected ("
-						+ dChanObj + "); message not delivered");
-			}
-			return;
-		}
-		processMessage(dChanObj.getStaChaNetLocObj(), dataInfo);
 	}
 
 	/**

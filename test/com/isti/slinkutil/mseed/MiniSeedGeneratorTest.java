@@ -15,7 +15,7 @@ import com.isti.slinkutil.IMessageManager;
 import com.isti.slinkutil.ISamples;
 import com.isti.slinkutil.LogMgr;
 import com.isti.slinkutil.MiniSeedMsgHldr;
-import com.isti.slinkutil.SeedTime;
+import com.isti.slinkutil.SampleRateInfo;
 import com.isti.slinkutil.StaChaNetLoc;
 
 /**
@@ -34,25 +34,25 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 		System.out.println("Done");
 	}
 
-	int debugMask = ILogger.NO_LEVEL; // ILogger.ALL_LEVEL;
-	long sampleDuration = 1000; // sample duration in milliseconds
-	int sps = 100; // samples per second
-	int min = 50;
-	int max = 1000;
-	int dx = (max - min) / sps;
-	int sign = 1;
-	int value = min;
-	int maxNumSamples = (int) (sps * (sampleDuration / 1000.));
-	int[] sampleArray = new int[maxNumSamples];
-	Object samples;
 	IConfigParams configParams;
-	IDigChannel dChanObj;
 	IDataInfo dataInfo;
-	IMessageManager messageManager;
+	IDigChannel dChanObj;
+	int debugMask = ILogger.NO_LEVEL; // ILogger.ALL_LEVEL;
+	int dx;
+	int max = 1000;
 	int maxCount = 100;
-	SeedTime startTime;
-
+	int maxNumSamples;
+	IMessageManager messageManager;
+	int min = 50;
 	int numSamples;
+	int[] sampleArray;
+	long sampleDuration = 1000; // sample duration in milliseconds
+	Object samples;
+	int sign = 1;
+	int sps = 100; // samples per second
+	long startTime, endTime;
+
+	int value = min;
 
 	/**
 	 * Create the MiniSeedGenerator test.
@@ -66,6 +66,9 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 				((ConsoleLogger) logger).setDebugMask(debugMask);
 			}
 		}
+		maxNumSamples = (int) (sps * (sampleDuration / 1000.));
+		sampleArray = new int[maxNumSamples];
+		dx = (max - min) / sps;
 		configParams = this;
 		dataInfo = this;
 		// samples = sampleArray;
@@ -108,6 +111,26 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 	}
 
 	/**
+	 * Get the time stamp of the first sample value measured in milliseconds
+	 * since epoch.
+	 * 
+	 * @return a positive value or zero if no samples.
+	 */
+	public long getFirstTimeStamp() {
+		return startTime;
+	}
+
+	/**
+	 * Get the time stamp of the last sample value measured in milliseconds
+	 * since epoch.
+	 * 
+	 * @return a positive value or zero if no samples.
+	 */
+	public long getLastTimeStamp() {
+		return endTime;
+	}
+
+	/**
 	 * Get the maximum cache age in milliseconds.
 	 * 
 	 * @return the maximum cache age in milliseconds.
@@ -135,12 +158,23 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 	}
 
 	/**
-	 * Get the I/O and clock flags.
+	 * Get the sample at the specified index as an integer.
 	 * 
-	 * @return the I/O and clock flags.
+	 * @param index
+	 *            the index.
+	 * @return the sample.
 	 */
-	public byte getIoClockFlags() {
-		return DEFAULT_IO_CLOCK_FLAGS;
+	public int getSampleAsInt(int index) {
+		return sampleArray[index];
+	}
+
+	/**
+	 * Get the sample rate.
+	 * 
+	 * @return the sample rate.
+	 */
+	public double getSampleRate() {
+		return sps;
 	}
 
 	/**
@@ -154,17 +188,6 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 	}
 
 	/**
-	 * Get the sample at the specified index as an integer.
-	 * 
-	 * @param index
-	 *            the index.
-	 * @return the sample.
-	 */
-	public int getSampleAsInt(int index) {
-		return sampleArray[index];
-	}
-
-	/**
 	 * Get the selected channel names.
 	 * 
 	 * @return the selected channel names or null if none.
@@ -174,39 +197,12 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 	}
 
 	/**
-	 * Get the sample rate.
-	 * 
-	 * @return the sample rate.
-	 */
-	public double getSampleRate() {
-		return sps;
-	}
-
-	/**
-	 * Get the start SEED time.
-	 * 
-	 * @return the start SEED time.
-	 */
-	public SeedTime getStartSeedTime() {
-		return startTime;
-	}
-
-	/**
-	 * Get the current time-quality value.
-	 * 
-	 * @return the current time-quality value or 0 if none available.
-	 */
-	public byte getTimeQualityValue() {
-		return DEFAULT_TIMING_QUALITY;
-	}
-
-	/**
 	 * Test the MiniSeedGenerator.
 	 */
 	public void testMiniSeedGenerator() {
 		final long firstTime = (System.currentTimeMillis() / 1000) * 1000;
 		for (int count = 0; maxCount == 0 || count <= maxCount; count++) {
-			startTime = new SeedTime(firstTime + count * sampleDuration);
+			startTime = firstTime + (count * sampleDuration);
 			numSamples = 0;
 			if (count < maxCount) {
 				for (int i = 0; i < maxNumSamples;) {
@@ -224,13 +220,28 @@ public class MiniSeedGeneratorTest implements IConfigParams, IDataInfo,
 				}
 			}
 
+			if (numSamples == 0) {
+				continue;
+			}
+
 			try {
+				final long timeDiff = Math.round((double) sampleDuration
+						/ (double) numSamples * (double) (numSamples - 1));
+				endTime = startTime + timeDiff;
+				// calculate the sample rate
+				double csps = SampleRateInfo.getSampleRate(dataInfo);
+				if (csps != sps) {
+					System.err.println("calculated sample rate " + csps
+							+ " does not match sample rate " + sps + " ("
+							+ timeDiff + ")");
+				}
 				messageManager.processMessage(dChanObj, dataInfo);
 			} catch (Exception ex) {
 				ex.printStackTrace();
 				return;
 			} finally {
-				startTime = null;
+				startTime = 0;
+				endTime = 0;
 			}
 			try {
 				Thread.sleep(sampleDuration);

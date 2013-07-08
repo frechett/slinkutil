@@ -13,30 +13,27 @@
 
 package com.isti.slinkutil.mseed;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.isti.slinkutil.BasicMessageManager;
-import com.isti.slinkutil.DataInfo;
 import com.isti.slinkutil.IConfigParams;
 import com.isti.slinkutil.IDataInfo;
 import com.isti.slinkutil.IMessageManager;
 import com.isti.slinkutil.IMessageNumber;
 import com.isti.slinkutil.ISamples;
+import com.isti.slinkutil.IStaChaNetLoc;
 import com.isti.slinkutil.LogMgr;
 import com.isti.slinkutil.MiniSeedMsgHldr;
 import com.isti.slinkutil.SampleRateInfo;
 import com.isti.slinkutil.SeedTime;
-import com.isti.slinkutil.IStaChaNetLoc;
 import com.isti.slinkutil.StaChaNetLoc;
 import com.isti.slinkutil.seisFile.mseed.Blockette1000;
 import com.isti.slinkutil.seisFile.mseed.Blockette1001;
+import com.isti.slinkutil.seisFile.mseed.Btime;
 import com.isti.slinkutil.seisFile.mseed.DataHeader;
 import com.isti.slinkutil.seisFile.mseed.DataRecord;
 import com.isti.slinkutil.seisFile.mseed.SeedFormatException;
@@ -48,12 +45,22 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	/** The data header type code. */
 	private final static char dataHeaderTypeCode = 'D';
 
+	/** The default I/O clock flags. */
+	public final static byte DEFAULT_IO_CLOCK_FLAGS = 32; // Clock locked
+
+	/** The default timing quality. */
+	public final static byte DEFAULT_TIMING_QUALITY = 0;
+
 	/** The default continuation code. */
 	private static final boolean defaultContinuationCode = false;
+
+	/** The gap threshold in milliseconds. */
+	private static long gapThreshold = 1000;
 
 	/** The maximum number of Steim frames. */
 	private final static int maxSteimFrames = SteimCodec
 			.getFrames(PREFERRED_MAX_BYTE_LENGTH);
+
 	/**
 	 * Creates the miniSEED log record message.
 	 * 
@@ -133,6 +140,60 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 				numSamples, messageNumber);
 	}
 
+	/**
+	 * Get the delta.
+	 * 
+	 * @param startTime
+	 *            the start time.
+	 * @param endTime
+	 *            the end time.
+	 * @param numSamples
+	 *            the number of samples.
+	 * @return the delta.
+	 */
+	public static double getDelta(final long startTime, final long endTime,
+			final int numSamples) {
+		double delta = 0.;
+		if (numSamples > 1) {
+			long timeSpan = endTime - startTime;
+			delta = (double) timeSpan / (double) (numSamples - 1);
+		}
+		return delta;
+	}
+
+	/**
+	 * Get the gap threshold.
+	 * 
+	 * @return the gap threshold in milliseconds.
+	 */
+	public static long getGapThreshold() {
+		return gapThreshold;
+	}
+
+	/**
+	 * Get the time stamp for the data with the specified data index.
+	 * 
+	 * @param dataInfo
+	 *            the data information.
+	 * @param dataIndex
+	 *            the data index.
+	 * @return the time stamp.
+	 */
+	public static long getTimeStamp(final long time, final double delta,
+			final int dataIndex) {
+		return time + (long) (dataIndex * delta);
+	}
+
+	/**
+	 * Set the gap threshold.
+	 * 
+	 * @param gapThreshold
+	 *            the gap threshold in milliseconds.
+	 */
+	public static void setGapThreshold(long gapThreshold) {
+		MiniSeedGenerator.gapThreshold = gapThreshold;
+	}
+
 	/** The continuation code. */
 	private boolean continuationCode = defaultContinuationCode;
 
@@ -145,14 +206,20 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	/** The data to encode. */
 	private final int[] dataToEncode;
 
-	/** The data to encode data information. */
-	private DataInfo dataToEncodeDataInfo = null;
+	/** The data to encode delta. */
+	private double dataToEncodeDelta;
+
+	/** The data to encode start time. */
+	private long dataToEncodeEndTime = 0;
 
 	/** The data to encode index. */
 	private int dataToEncodeIndex = 0;
 
 	/** The data to encode length. */
 	private int dataToEncodeLength = 0;
+
+	/** The data to encode start time. */
+	private long dataToEncodeStartTime = 0;
 
 	/** The maximum data to encode size. */
 	private final int maxDataToEncodeSize;
@@ -165,8 +232,6 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 
 	/** The station, channel, network and location. */
 	private final IStaChaNetLoc staChaNetLoc;
-
-	private final File testOutputDir = null;// new File("output/test");
 
 	/**
 	 * Creates the miniSEED generator.
@@ -230,22 +295,6 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	 * 
 	 * @param miniSeedMsgList
 	 *            the miniSEED message list.
-	 * @throws SeedFormatException
-	 *             if a SEED format exception occurs.
-	 * @throws IOException
-	 *             if an I/O exception occurs.
-	 */
-	protected void addMiniSeedMsg(final List miniSeedMsgList)
-			throws IOException, SeedFormatException {
-		final EncodedData encodedData = encodeData();
-		addMiniSeedMsg(miniSeedMsgList, encodedData);
-	}
-
-	/**
-	 * Create and add the miniSEED message.
-	 * 
-	 * @param miniSeedMsgList
-	 *            the miniSEED message list.
 	 * @param encodedData
 	 *            the encoded data.
 	 * @throws SeedFormatException
@@ -257,7 +306,8 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 			final EncodedData encodedData) throws IOException,
 			SeedFormatException {
 		if (encodedData != null) {
-			final MiniSeedMsgHldr miniSeedMsg = createMiniSeedMsg(encodedData);
+			final MiniSeedMsgHldr miniSeedMsg = createMiniSeedMsg(encodedData,
+					dataToEncodeStartTime, dataToEncodeDelta);
 			miniSeedMsgList.add(miniSeedMsg);
 			// the last encoded value which becomes the bias for the next
 			// compression
@@ -293,7 +343,8 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 			System.arraycopy(dataToEncode, dataIndex, dataToEncode,
 					dataToEncodeIndex, numOldSamplesSave);
 			// determine the start time for the old samples
-			dataToEncodeDataInfo = new DataInfo(dataToEncodeDataInfo, dataIndex);
+			dataToEncodeStartTime = getTimeStamp(dataToEncodeStartTime,
+					dataToEncodeDelta, dataIndex);
 			// set the buffer index
 			dataToEncodeIndex = numOldSamplesSave;
 			// clear the number of old samples
@@ -305,7 +356,9 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	 * Clear the data to encode.
 	 */
 	protected void clearDataToEncode() {
-		dataToEncodeDataInfo = null;
+		dataToEncodeStartTime = 0;
+		dataToEncodeEndTime = 0;
+		dataToEncodeDelta = 0;
 		dataToEncodeIndex = 0;
 		numOldSamplesSave = 0;
 	}
@@ -339,29 +392,35 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	 * 
 	 * @param encodedData
 	 *            the encoded data.
+	 * @param startTime
+	 *            the start time.
+	 * @param delta
+	 *            the delta.
 	 * @return the miniSEED message.
 	 * @throws SeedFormatException
 	 *             if a SEED format exception occurs.
 	 * @throws IOException
 	 *             if an I/O exception occurs.
 	 */
-	protected MiniSeedMsgHldr createMiniSeedMsg(EncodedData encodedData)
-			throws IOException, SeedFormatException {
+	protected MiniSeedMsgHldr createMiniSeedMsg(EncodedData encodedData,
+			final long startTime, final double delta) throws IOException,
+			SeedFormatException {
 		final int numSamples = encodedData.getNumSamples();
 		final int sequenceNum = getDataRecordSequenceNum();
-		final IDataInfo dataInfo = dataToEncodeDataInfo;
+		final long endTime = getTimeStamp(startTime, delta, numSamples - 1);
+		final SeedTime startSeedTime = new SeedTime(startTime);
+		final Btime startBtime = startSeedTime.getBtime();
+		final SampleRateInfo sampleRateInfo = new SampleRateInfo(
+				SampleRateInfo.getSampleRate(startTime, endTime, numSamples));
 		final IMessageNumber messageNumber = messageManager.getMessageNumber();
-		final byte timingQuality = dataInfo.getTimeQualityValue();
-		DataHeader dataHeader = new DataHeader(sequenceNum, dataHeaderTypeCode,
-				continuationCode);
+		final DataHeader dataHeader = new DataHeader(sequenceNum,
+				dataHeaderTypeCode, continuationCode);
 		dataHeader.setStationIdentifier(staChaNetLoc.getStationCode());
 		dataHeader.setChannelIdentifier(staChaNetLoc.getChannelCode());
 		dataHeader.setNetworkCode(staChaNetLoc.getNetworkCode());
 		dataHeader.setLocationIdentifier(staChaNetLoc.getLocationCode());
-		dataHeader.setStartBtime(dataInfo.getStartSeedTime().getBtime());
-		dataHeader.setIOClockFlags(dataInfo.getIoClockFlags());
-		SampleRateInfo sampleRateInfo = new SampleRateInfo(
-				dataInfo.getSampleRate());
+		dataHeader.setStartBtime(startBtime);
+		dataHeader.setIOClockFlags(DEFAULT_IO_CLOCK_FLAGS);
 		dataHeader.setSampleRateFactor(sampleRateInfo.getSampleRateFactor());
 		dataHeader.setSampleRateMultiplier(sampleRateInfo
 				.getSampleRateMultiplier());
@@ -369,19 +428,19 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 		dataHeader.setNumSamples((short) numSamples);
 		dataHeader.setDataBlocketteOffset((byte) PREFERRED_BEGINNING_OF_DATA);
 
-		DataRecord dataRecord = new DataRecord(dataHeader);
+		final DataRecord dataRecord = new DataRecord(dataHeader);
 		dataRecord.setRecordSize(PREFERRED_DATA_LENGTH);
 		dataRecord.setData(encodedData.getEncodedData());
 
-		Blockette1000 b1000 = new Blockette1000();
+		final Blockette1000 b1000 = new Blockette1000();
 		b1000.setDataRecordLength(PREFERRED_DATA_RECORD_LENGTH);
 		b1000.setEncodingFormat(encodedData.getEncodingFormat());
 		b1000.setWordOrder(BIG_ENDIAN_WORD_ORDER);
 		dataRecord.addBlockette(b1000);
 
-		Blockette1001 b1001 = new Blockette1001();
+		final Blockette1001 b1001 = new Blockette1001();
 		b1001.setFrameCount((byte) maxSteimFrames);
-		b1001.setTimingQuality(timingQuality);
+		b1001.setTimingQuality(DEFAULT_TIMING_QUALITY);
 		dataRecord.addBlockette(b1001);
 		if (LogMgr.isDebugLevel4()) { // debug-mask bit is set; output debug
 										// message
@@ -391,22 +450,13 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream(
 				PREFERRED_DATA_LENGTH);
-		DataOutputStream dos = new DataOutputStream(baos);
+		final DataOutputStream dos = new DataOutputStream(baos);
 		dataRecord.write(dos);
 		dos.flush();
 		final byte[] miniSeedData = baos.toByteArray();
-		MiniSeedMsgHldr miniSeedMsgHldr = new MiniSeedMsgHldr(staChaNetLoc,
-				dataInfo.getStartSeedTime(), miniSeedData, numSamples,
+		final MiniSeedMsgHldr miniSeedMsgHldr = new MiniSeedMsgHldr(
+				staChaNetLoc, startSeedTime, miniSeedData, numSamples,
 				messageNumber);
-		// TODO test output
-		if (testOutputDir != null) {
-			testOutputDir.mkdirs();
-			BufferedOutputStream bos = new BufferedOutputStream(
-					new FileOutputStream(miniSeedMsgHldr.getFile(testOutputDir)));
-			dos = new DataOutputStream(bos);
-			dataRecord.write(dos);
-			dos.flush();
-		}
 		return miniSeedMsgHldr;
 	}
 
@@ -447,42 +497,41 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 
 		final List miniSeedMsgList = new ArrayList();
 		final int numSamples = dataInfo.getNumSamples();
-		final SeedTime startTime, nextStartTime;
 
 		// if there was previous data
 		if (isPreviousDataAvailable()) {
 			// determine if there is a gap if there is new data
+			long gapLength = 0;
 			boolean gapFlag = false;
 			if (numSamples > 0) {
-				startTime = dataInfo.getStartSeedTime();
-				nextStartTime = dataToEncodeDataInfo.getStartSeedTime()
-						.projectTime(dataToEncodeIndex,
-								dataToEncodeDataInfo.getSampleRate());
-				if (!startTime.equals(nextStartTime)) {
+				// check for gap based upon difference from last end time and
+				// start time
+				gapLength = dataToEncodeEndTime - dataInfo.getFirstTimeStamp();
+				if (gapLength > gapThreshold) {
 					gapFlag = true;
 				}
-			} else {
-				startTime = null;
-				nextStartTime = null;
 			}
 
-			// if there is a gap or there is no data
+			// if there is a gap or there is no new data
 			if (gapFlag || numSamples == 0) {
 				// create the miniSEED and add it to the list
-				addMiniSeedMsg(miniSeedMsgList);
-				if (LogMgr.isDebugLevel2()) { // debug-mask bit is set; output
+				addMiniSeedMsg(miniSeedMsgList, encodeData());
+				if (LogMgr.isDebugLevel1()) { // debug-mask bit is set; output
 												// debug
 					// message
 					LogMgr.usrMsgDebug("MiniSeedGenerator.getMiniSeedMessages("
-							+ staChaNetLoc + "):  " + "gap=" + gapFlag
-							+ ", numSamples=" + numSamples + ", startTime="
-							+ startTime + ", nextStartTime=" + nextStartTime);
+							+ staChaNetLoc + "):  " + "gap=" + gapFlag + " ("
+							+ gapLength + "), numSamples=" + numSamples
+							+ ", startTime=" + dataInfo.getFirstTimeStamp()
+							+ ", endTime=" + dataInfo.getLastTimeStamp());
 				}
 			}
 		}
 
 		// if there is new data
 		if (numSamples > 0) {
+			// save the end time
+			dataToEncodeEndTime = dataInfo.getLastTimeStamp();
 
 			// for all of the data
 			for (int dataIndex = 0; dataIndex < numSamples;) {
@@ -492,7 +541,7 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 				// if no data is available
 				if (dataAvailable == 0) {
 					// create the miniSEED and add it to the list
-					addMiniSeedMsg(miniSeedMsgList);
+					addMiniSeedMsg(miniSeedMsgList, encodeData());
 					if (LogMgr.isDebugLevel1()) { // debug-mask bit is set;
 													// output debug
 						// message
@@ -526,7 +575,16 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 
 				// if there was no previous data
 				if (!isPreviousDataAvailable()) {
-					dataToEncodeDataInfo = new DataInfo(dataInfo, dataIndex);
+					dataToEncodeDelta = getDelta(dataInfo.getFirstTimeStamp(),
+							dataInfo.getLastTimeStamp(),
+							dataInfo.getNumSamples());
+					dataToEncodeStartTime = getTimeStamp(
+							dataInfo.getFirstTimeStamp(), dataToEncodeDelta,
+							dataIndex);
+				} else {
+					// calculate the delta
+					dataToEncodeDelta = getDelta(dataToEncodeStartTime,
+							dataToEncodeEndTime, dataToEncodeLength);
 				}
 
 				// add the length to the data index
@@ -618,6 +676,6 @@ public class MiniSeedGenerator implements MiniSeedConstants {
 	 * @return true if previous data is available, false otherwise.
 	 */
 	protected boolean isPreviousDataAvailable() {
-		return dataToEncodeDataInfo != null && dataToEncodeIndex > 0;
+		return dataToEncodeStartTime != 0 && dataToEncodeIndex > 0;
 	}
 }

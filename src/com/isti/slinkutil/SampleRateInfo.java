@@ -31,6 +31,50 @@ public class SampleRateInfo {
 		return sampleRate;
 	}
 
+	/**
+	 * Get the sample rate.
+	 * 
+	 * @param dataInfo
+	 *            the data information.
+	 * @return the sample rate.
+	 */
+	public static double getSampleRate(IDataInfo dataInfo) {
+		return getSampleRate(dataInfo.getFirstTimeStamp(),
+				dataInfo.getLastTimeStamp(), dataInfo.getNumSamples());
+	}
+
+	/**
+	 * Get the sample rate.
+	 * 
+	 * @param startTime
+	 *            the start time.
+	 * @param endTime
+	 *            the end time.
+	 * @param numSamples
+	 *            the number of samples.
+	 * @return the sample rate.
+	 */
+	public static double getSampleRate(long startTime, long endTime,
+			int numSamples) {
+		return (numSamples - 1) / ((endTime - startTime) / 1000.0);
+	}
+
+	/**
+	 * Get the sample rate.
+	 * 
+	 * @param startTime
+	 *            the start time.
+	 * @param endTime
+	 *            the end time.
+	 * @param numSamples
+	 *            the number of samples.
+	 * @return the sample rate.
+	 */
+	public static double getSampleRate(SeedTime startTime, SeedTime endTime,
+			int numSamples) {
+		return getSampleRate(startTime.getTime(), endTime.getTime(), numSamples);
+	}
+
 	/** The sample rate factor. */
 	private final short factor;
 
